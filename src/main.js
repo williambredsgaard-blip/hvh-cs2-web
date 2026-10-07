@@ -32,6 +32,7 @@ import { initMenu, menuReady, menuVisible, renderMenu } from './menu.js';
 import { buildPracticeMap, markPracticeAgents, practiceThink, updatePractice } from './practice.js';
 import { defaultCheats } from './agents.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import './mobile.js';   // <-- ADDED: touch controls — self-installs on touch devices only, no-op on desktop
 
 const $ = s => document.querySelector(s);
 
@@ -85,20 +86,20 @@ function adminLogin() {
 
 /* ============================== input ============================== */
 addEventListener('keydown', e => {
-  if (e.code === "Backquote") { if (adminUnlocked) toggleEditor(); else adminLogin(); e.preventDefault(); return; }     // ~ : map editor, gated behind admin login
-  if (isEditorOpen()) { keys[e.code] = true; editorKey(e.code); e.preventDefault(); return; }   // editor swallows input
+  if (e.code === "Backquote") { if (adminUnlocked) toggleEditor(); else adminLogin(); e.preventDefault(); return; }
+  if (isEditorOpen()) { keys[e.code] = true; editorKey(e.code); e.preventDefault(); return; }
   if (e.code === "KeyI" && GAME.phase !== "editor") { if (!GAME.injected) { showHint("No cheat loaded — INJECT it from the main menu first"); e.preventDefault(); return; } toggleCheatMenu(); e.preventDefault(); return; }
   if (GAME.phase === "warmup" || GAME.phase === "editor") return;
-  if (e.code === "Escape") { togglePause(); e.preventDefault(); return; }   // pause: resume or back to the main menu
+  if (e.code === "Escape") { togglePause(); e.preventDefault(); return; }
   const human = refs.human;
   keys[e.code] = true;
   if (e.code === "KeyB") { const p = $("#buyPanel"); p.classList.contains("show") ? closeBuy() : openBuy(); }
   if (e.code === "Tab") { $("#sbPanel").classList.add("show"); renderScoreboard(); e.preventDefault(); }
-  if (e.code === "Digit1") { human.equippedNade = null; if (human.slotPrimary) switchTo(human, human.slotPrimary); }    // 1 = rifle/primary
-  if (e.code === "Digit2") { human.equippedNade = null; if (human.slotSecondary) switchTo(human, human.slotSecondary); } // 2 = pistol/secondary
-  if (e.code === "Digit3") { human.equippedNade = null; switchTo(human, 'knife'); }                                    // 3 = knife
-  if (/^Digit[123]$/.test(e.code)) syncWeaponSel();                                                                    // the Rage tab follows the gun in hand
-  if (e.code === "Digit4" || e.code === "KeyG") { equipGrenade(); }                                                    // 4 = grenade
+  if (e.code === "Digit1") { human.equippedNade = null; if (human.slotPrimary) switchTo(human, human.slotPrimary); }
+  if (e.code === "Digit2") { human.equippedNade = null; if (human.slotSecondary) switchTo(human, human.slotSecondary); }
+  if (e.code === "Digit3") { human.equippedNade = null; switchTo(human, 'knife'); }
+  if (/^Digit[123]$/.test(e.code)) syncWeaponSel();
+  if (e.code === "Digit4" || e.code === "KeyG") { equipGrenade(); }
   {
     const aaK = human.cheats.antiaim || {};
     if (aaK.fakeduck && aaK.fakeduckMode === "toggle" && e.code === (aaK.fakeduckKey || "KeyX") && !e.repeat) {
@@ -110,9 +111,9 @@ addEventListener('keydown', e => {
   if (e.code === "KeyE") { tryRescueInteract(human); }
   if (e.code === "KeyV") {
     if (human.alive) { GAME.thirdPerson = !GAME.thirdPerson; showHint("Third person " + (GAME.thirdPerson ? "ON" : "OFF")); }
-    else { spec.tp = !spec.tp; showHint("Spectator " + (spec.tp ? "third" : "first") + " person"); }     // V while spectating a player
+    else { spec.tp = !spec.tp; showHint("Spectator " + (spec.tp ? "third" : "first") + " person"); }
   }
-  if (e.code === "Space" && !human.alive && !e.repeat) {                                                  // spectate: Space toggles free-fly cam
+  if (e.code === "Space" && !human.alive && !e.repeat) {
     spec.free = !spec.free;
     if (spec.free) { spec.pos.copy(camera.position); const t = spec.target; if (t) { spec.yaw = t.yaw; spec.pitch = t.pitch; } }
     showHint(spec.free ? "Free cam — WASD/Shift to fly, mouse to look, Space to lock onto a player" : "Locked — click to switch player, V for third person");
@@ -126,7 +127,6 @@ addEventListener('keydown', e => {
   if (e.code === "F6") { c.aimbot.autoStop = !c.aimbot.autoStop; showHint("Auto stop " + (c.aimbot.autoStop ? "ON" : "OFF")); syncCheatUI(); }
   if (e.code === "F7") { c.visuals.esp = !c.visuals.esp; showHint("ESP " + (c.visuals.esp ? "ON" : "OFF")); syncCheatUI(); }
   if (e.code === "F8") { c.visuals.chams = !c.visuals.chams; showHint("Chams " + (c.visuals.chams ? "ON" : "OFF")); syncCheatUI(); }
-  // swallow browser shortcuts for game keys — most importantly Ctrl+W (closes the tab)
   if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "ShiftLeft", "KeyC", "Tab"].includes(e.code)) e.preventDefault();
   if (e.ctrlKey) e.preventDefault();
 });
@@ -136,10 +136,10 @@ renderer.domElement.addEventListener('mousedown', e => { if (isEditorOpen()) ret
 addEventListener('mouseup', e => { if (isEditorOpen()) return; if (e.button === 0) input.mouseDown = false; if (e.button === 2) input.rmbDown = false; });
 addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('mousemove', e => {
-  if (isEditorOpen() || document.pointerLockElement !== renderer.domElement || !refs.human) return;   // the editor manages its own pointer
+  if (isEditorOpen() || document.pointerLockElement !== renderer.domElement || !refs.human) return;
   const sens = 0.0022;
   if (refs.human.alive) { refs.human.yaw -= e.movementX * sens; refs.human.pitch = THREE.MathUtils.clamp(refs.human.pitch - e.movementY * sens, -1.5, 1.5); }
-  else if (spec.free) { spec.yaw -= e.movementX * sens; spec.pitch = THREE.MathUtils.clamp(spec.pitch - e.movementY * sens, -1.5, 1.5); }   // spectator free-cam look
+  else if (spec.free) { spec.yaw -= e.movementX * sens; spec.pitch = THREE.MathUtils.clamp(spec.pitch - e.movementY * sens, -1.5, 1.5); }
 });
 function onRMB() {
   const human = refs.human; if (!human.alive) return;
@@ -149,23 +149,20 @@ function onRMB() {
   else if (human.cur === "r8") human.fireMode = "fan";
 }
 renderer.domElement.addEventListener('click', () => {
-  unlockAudio();   // a user gesture lets the WebAudio context start
-  if (isEditorOpen()) return;   // editor uses a visible cursor (no pointer lock) and its own handlers
+  unlockAudio();
+  if (isEditorOpen()) return;
   if (GAME.phase === "warmup" || GAME.phase === "editor" || anyPanelOpen()) return;
-  if (refs.human && !refs.human.alive && !spec.free) cycleSpec(1);   // spectating locked: click switches player
-  renderer.domElement.requestPointerLock();
+  if (refs.human && !refs.human.alive && !spec.free) cycleSpec(1);
+  renderer.domElement.requestPointerLock();   // no-ops on touch (see mobile.js)
 });
 
 /* ============================== human control ============================== */
 function humanMove(dt) {
   const human = refs.human;
-  // crouch is C, NOT Ctrl: Ctrl+W (duck + forward) closes the browser tab and a web page can't block it
   human.crouch = !!keys["KeyC"];
-  // FAKE DUCK BIND — held by default. It forces a real crouch, so it is deliberately something you
-  // press for a peek rather than a switch you leave on and then wonder why you are walking so slowly.
   const aaH = human.cheats.antiaim || {};
   human._fdActive = (aaH.fakeduckMode === "toggle") ? !!human._fdToggle : !!keys[aaH.fakeduckKey || "KeyX"];
-  applyFakeDuck(human);            // the stance it forces is real; the model keeps standing
+  applyFakeDuck(human);
   human.walk = !!keys["ShiftLeft"];
   let f = 0, s = 0; if (keys["KeyW"]) f++; if (keys["KeyS"]) f--; if (keys["KeyA"]) s--; if (keys["KeyD"]) s++;
   const fwd = new THREE.Vector3(-Math.sin(human.yaw), 0, -Math.cos(human.yaw));
@@ -173,29 +170,16 @@ function humanMove(dt) {
   const dir = fwd.multiplyScalar(f).add(right.multiplyScalar(s));
   if (keys["Space"] && human.onGround) {
     human.vel.y = JUMP_VEL;
-    // bhop: a jump issued the same frame you land chains the speed boost; a jump from a standstill starts at 1x
     human.bhopBoost = human._landedThisFrame ? Math.min(BHOP_MAX, (human.bhopBoost || 1) + BHOP_GAIN) : Math.max(1, human.bhopBoost || 1);
   }
-  if (human.onGround && !keys["Space"]) human.bhopBoost = 1;   // grounded without immediately re-jumping → lose the chain
-  if (human.crouch) human.bhopBoost = 1;                       // crouching kills the bhop speed (CS: can't crouch-bhop fast)
+  if (human.onGround && !keys["Space"]) human.bhopBoost = 1;
+  if (human.crouch) human.bhopBoost = 1;
   human.realYaw = human.yaw;
   human.speedScale = 1;
   const c = human.cheats;
-  // AUTO-STOP: shed exactly enough speed to reach the configured min hit chance — not a dead stop.
-  // autoStopScale() solves for the largest speed whose bloom still makes the shot canShoot() picked,
-  // so a close-range shot barely slows you and only a long one plants you. Knife is excluded inside.
-  // Auto-stop is a movement assist, not part of the ragebot — gating it behind aimbot.on meant pressing
-  // F6 on its own silently did nothing.
   if (c.aimbot.autoStop && human.onGround) {
     const w = WEAPONS[human.cur];
-    // don't keep planting between shots on a slow non-auto (SSG/scout bolt cycle) — only stop when actually able to fire now
-    // BETWEEN SHOTS: plant only in the frames a round can actually leave (cooldown over). While the gun
-    // cycles you keep moving — autos included — so a spray is stop-shoot-move-stop, not a statue.
     const fireReady = human.fireCd <= 0;
-    // LIMBO BREAKER (what real cheats do): if auto-stop has held you slow for 0.7s and no shot has gone
-    // out, the shot is not coming — release for 0.4s and keep moving instead of standing planted
-    // ...and only for a round that is actually going out: the aimbot's own (auto shoot) or yours (mouse
-    // held). A quick-stop in that frame, full speed in every other — see autoStopNow().
     if (fireReady && (c.aimbot.autoShoot || input.mouseDown) && autoStopNow(human)) human.speedScale = 0;
   }
   moveAgent(human, dir, dt, false);
@@ -205,7 +189,6 @@ function humanShoot(dt) {
   const human = refs.human;
   if (!human.alive) return;
   const md = input.mouseDown, rmb = input.rmbDown;
-  // grenade equipped → left-click throws, then back to gun
   if (human.equippedNade) {
     if (md && human.fireCd <= 0) {
       const key = human.equippedNade;
@@ -218,35 +201,28 @@ function humanShoot(dt) {
     }
     return;
   }
-  // knife
   if (WEAPONS[human.cur] && WEAPONS[human.cur].melee) {
     const c2 = human.cheats;
-    if (c2.aimbot.on && c2.aimbot.autoKnife) { if (human.fireCd <= 0) meleeAttack(human, false, true); return; }   // auto: only swings (and sounds) when an enemy is actually in range
+    if (c2.aimbot.on && c2.aimbot.autoKnife) { if (human.fireCd <= 0) meleeAttack(human, false, true); return; }
     if (human.fireCd <= 0) { if (md) meleeAttack(human, false); else if (rmb) meleeAttack(human, true); }
     return;
   }
-  // R8 Revolver: primary = hold to cock, fires at full draw; RMB = fan
   if (human.cur === "r8" && human.reloadT <= 0) {
     const wp8 = human.weapons.r8; if (!wp8) return; const c8 = human.cheats; const COCK = WEAPONS.r8.cockTime || 0.25;
     if (rmb) {
       human.r8Charge = 0;
-      if (human.fireCd <= 0) { if (wp8.ammo <= 0) { startReload(human); return; } human.fireMode = "fan"; sfxRevolverCock(); fireWeaponCommon(human); manualFire(human); updateHUDWeapons(); }   // fan: cock + fire each shot (spams the cock). No fireDoubleTap — the R8 is excluded from double tap (see NO_DOUBLE_TAP)
+      if (human.fireCd <= 0) { if (wp8.ammo <= 0) { startReload(human); return; } human.fireMode = "fan"; sfxRevolverCock(); fireWeaponCommon(human); manualFire(human); updateHUDWeapons(); }
       return;
     }
     if (c8.aimbot.on && c8.aimbot.autoRevolver) {
-      // CONSTANT auto-cock: the hammer cycles every 0.199s and never holds — the cock sound plays
-      // EVERY completed cycle whether or not anything is in front of you. On each completed cock it
-      // fires ONLY if a target is firable AT THAT INSTANT (aimbotFire re-checks canShoot, so a shot
-      // lands only if the target is still firable after the cock time it took to get here). The
-      // 0.199s cadence — not the R8's normal cooldown — paces the fire, so it beats a manual cock.
       const AUTO_COCK = 0.25;
       human.r8Charge = (human.r8Charge || 0) + dt / AUTO_COCK;
-      while (human.r8Charge >= 1) {                            // while (not if): a frame hitch never skips a cock
-        human.r8Charge -= 1;                                   // immediately re-cock for the next cycle
-        sfxRevolverCock();                                     // revolver_prepare on every hammer-back
+      while (human.r8Charge >= 1) {
+        human.r8Charge -= 1;
+        sfxRevolverCock();
         if (wp8.ammo <= 0) { startReload(human); human.r8Charge = 0; break; }
         human.fireMode = "primary";
-        if (aimbotFire(human)) human.fireCd = 0;               // target firable now → fire; cadence paces it
+        if (aimbotFire(human)) human.fireCd = 0;
       }
       updateHUDWeapons();
       return;
@@ -262,7 +238,7 @@ function humanShoot(dt) {
     if (md) {
       human.r8Charge = Math.min(1, (human.r8Charge || 0) + dt / COCK);
       if (human.r8Charge >= 0.95 && !human.r8Cocked) { human.r8Cocked = true; sfxRevolverCock(); }
-      if (human.r8Charge >= 1 && human.fireCd <= 0) { if (wp8.ammo <= 0) { startReload(human); human.r8Charge = 0; human.r8Cocked = false; return; } human.fireMode = "primary"; fireWeaponCommon(human); manualFire(human); human.r8Charge = 0; human.r8Cocked = false; updateHUDWeapons(); }   // the revolver never doubles — its hammer cock is not a next-attack check to shift past
+      if (human.r8Charge >= 1 && human.fireCd <= 0) { if (wp8.ammo <= 0) { startReload(human); human.r8Charge = 0; human.r8Cocked = false; return; } human.fireMode = "primary"; fireWeaponCommon(human); manualFire(human); human.r8Charge = 0; human.r8Cocked = false; updateHUDWeapons(); }
     } else { human.r8Charge = Math.max(0, (human.r8Charge || 0) - dt / COCK * 2); human.r8Cocked = false; }
     return;
   }
@@ -272,10 +248,6 @@ function humanShoot(dt) {
   if (c.aimbot.on && (md || c.aimbot.autoShoot)) {
     if (wp.ammo <= 0) { startReload(human); return; }
     if (aimbotFire(human)) { updateHUDWeapons(); return; }
-    // A target is up but the shot does not qualify yet (hit chance / min damage / resolver-safe box):
-    // HOLD. This used to fall through to a bloom-rolled manual shot at the crosshair, which is what
-    // made "force baim" look ignored (the manual round hit whatever box the crosshair was on) and
-    // what most of the "body misses" were — rounds the aimbot never approved.
     if (canShoot(human).have) return;
   }
   const r8fan = human.cur === "r8" && rmb;
@@ -284,23 +256,20 @@ function humanShoot(dt) {
     if (wp.ammo <= 0) { startReload(human); return; }
     human.fireMode = r8fan ? "fan" : "primary";
     fireWeaponCommon(human); manualFire(human);
-    fireDoubleTap(human, () => manualFire(human));      // double tap: the second round of the same server frame
+    fireDoubleTap(human, () => manualFire(human));
     if (glockBurst) {
-      human.burstQ = human.burstQ > 0 ? human.burstQ - 1 : 2;     // 3-round burst (this shot + 2 queued)
-      human.fireCd = human.burstQ > 0 ? 0.07 : 0.4;               // rapid within the burst, then a gap before the next
-      input.mouseDown = false;                                     // one click = one burst (the queue fires the rest)
-    } else if (!WEAPONS[human.cur].auto && !r8fan) input.mouseDown = false;  // semi-auto: one click one shot
+      human.burstQ = human.burstQ > 0 ? human.burstQ - 1 : 2;
+      human.fireCd = human.burstQ > 0 ? 0.07 : 0.4;
+      input.mouseDown = false;
+    } else if (!WEAPONS[human.cur].auto && !r8fan) input.mouseDown = false;
     updateHUDWeapons();
   }
 }
 
 /* ============================== main loop ============================== */
 let last = performance.now();
-// When the human is dead and only bots are left in a live round, fast-forward the rest of the round
-// at 2.5x by running extra (silent) sim steps per frame, with an on-screen note. Auto-stops when the
-// round ends or the human respawns next round (the condition is derived, never latched).
 const ff = { accum: 0, banner: null, RATE: 2.5 };
-function ffShouldRun() { const h = refs.human; return GAME.phase === "live" && !GAME.practice && h && !h.alive; }   // the range has no round to skip through
+function ffShouldRun() { const h = refs.human; return GAME.phase === "live" && !GAME.practice && h && !h.alive; }
 function updateFFBanner() {
   if (!ff.banner) {
     ff.banner = document.createElement('div'); ff.banner.id = 'ffBanner';
@@ -314,24 +283,24 @@ function loop(now) {
   requestAnimationFrame(loop);
   let dt = Math.min(0.05, (now - last) / 1000); last = now; clock.t += dt;
   if (GAME.phase !== "warmup" && GAME.phase !== "editor") {
-    step(dt);                                                // one real-time step (audio, camera, HUD)
-    if (ffShouldRun()) {                                     // only bots left → speed through to the round's end
+    step(dt);
+    if (ffShouldRun()) {
       ff.accum += (ff.RATE - 1);
-      setSfxMute(true); setBeepMute(true);                   // extra sim steps are silent — no 2.5x gunfire spam
-      try { while (ff.accum >= 1 && ffShouldRun()) { step(dt, true); ff.accum -= 1; } }   // re-check each step: a kill that ends the round stops us instantly
-      finally { setSfxMute(false); setBeepMute(false); }     // never leave audio latched off, even if a step throws
-      if (GAME.phase === "end" && GAME.winner != null) playBeep(GAME.winner === GAME.humanTeam ? 660 : 200, 0.25);   // round ended mid-fast-forward → replay the (muted) win/loss cue
+      setSfxMute(true); setBeepMute(true);
+      try { while (ff.accum >= 1 && ffShouldRun()) { step(dt, true); ff.accum -= 1; } }
+      finally { setSfxMute(false); setBeepMute(false); }
+      if (GAME.phase === "end" && GAME.winner != null) playBeep(GAME.winner === GAME.humanTeam ? 660 : 200, 0.25);
     } else ff.accum = 0;
   } else if (isEditorOpen()) editorUpdate();
   updateFFBanner();
-  if (GAME.phase === "warmup" && menuVisible()) renderMenu(); else render();   // main menu: the operator scene, not the empty world
+  if (GAME.phase === "warmup" && menuVisible()) renderMenu(); else render();
 }
 export function step(dt, extra) {
-  beginSimFrame();                       // invalidates the per-step aimbot target memo (see canShoot)
+  beginSimFrame();
   if (GAME.phase === "buy") { GAME.freeze -= dt; if (GAME.freeze <= 0) beginBuyToLive(); }
   else if (GAME.phase === "live") { GAME.timer -= dt; if (GAME.timer <= 0) awardWin(TEAM.T, "time"); }
   else if (GAME.phase === "end") { GAME.timer -= dt; if (GAME.timer <= 0) endRoundAdvance(); }
-  if (GAME.buyTimer > 0 && (GAME.phase === "buy" || GAME.phase === "live")) { GAME.buyTimer -= dt; if (GAME.buyTimer <= 0 && $("#buyPanel").classList.contains("show")) closeBuy(); }   // buying allowed past freeze, then auto-close
+  if (GAME.buyTimer > 0 && (GAME.phase === "buy" || GAME.phase === "live")) { GAME.buyTimer -= dt; if (GAME.buyTimer <= 0 && $("#buyPanel").classList.contains("show")) closeBuy(); }
 
   for (const a of agents) {
     if (a.fireCd > 0) a.fireCd -= dt;
@@ -339,25 +308,25 @@ export function step(dt, extra) {
     if (a.flashT > 0) a.flashT -= dt;
     if (a.firePenalty > 0) { const I = INACC[a.cur]; const rec = I ? (a.crouch ? I.recov * 0.7 : I.recov) : 0.35; a.firePenalty *= Math.pow(0.5, dt / rec); if (a.firePenalty < 0.05) a.firePenalty = 0; }
     if (a.hurtBloom > 0) { a.hurtBloom *= Math.pow(0.5, dt / 0.18); if (a.hurtBloom < 0.05) a.hurtBloom = 0; }
-    if (a.landBloom > 0) { a.landBloom = Math.max(0, a.landBloom - LAND_RECOVER * dt); }   // landing inaccuracy bleeds off
-    updateTickbase(a, dt);               // shot-exposure window, hide-shots bank, desync side-flip
+    if (a.landBloom > 0) { a.landBloom = Math.max(0, a.landBloom - LAND_RECOVER * dt); }
+    updateTickbase(a, dt);
     if (a.alive && a.reloadT <= 0 && a.cur && a.weapons[a.cur] && a.weapons[a.cur].ammo <= 0 && a.weapons[a.cur].reserve > 0 && !(a.isHuman && a.equippedNade)) startReload(a);
   }
 
   const human = refs.human;
-  if (!extra) {   // on fast-forward sim steps skip player/spectator input so the free-cam doesn't fly 2.5x
+  if (!extra) {
     if (human.alive && GAME.phase !== "end") {
       humanMove(dt);
       if (GAME.phase === "live") humanShoot(dt);
-    } else if (!human.alive) specUpdate();   // spectator camera (free-fly / locked)
+    } else if (!human.alive) specUpdate();
   }
   const canAct = GAME.phase === "live";
   for (const a of agents) {
     if (a.isHuman) continue;
     if (GAME.phase === "buy") a.body.g.position.copy(a.pos);
-    else if (canAct) { if (GAME.practice && a.room) practiceThink(a, dt); else botThink(a, dt); }   // every range bot uses the range brain (stand, face you, shoot/fake as its role says)
+    else if (canAct) { if (GAME.practice && a.room) practiceThink(a, dt); else botThink(a, dt); }
   }
-  for (const a of agents) recordTick(a, dt);     // lag-compensation history — everyone's backtrack reads this
+  for (const a of agents) recordTick(a, dt);
   updateHostages(dt); updateNades(dt); updateAreas(dt); updateEffects(dt); updatePractice(dt);
   for (const a of agents) updateAgentVisual(a);
   updateBacktrackGhosts(dt);
@@ -372,16 +341,14 @@ export function step(dt, extra) {
 function updateCamera() {
   const human = refs.human;
   if (human.alive) {
-    vm._specKey = null;   // alive: viewmodel belongs to us again — force a re-sync the next time we spectate
-    if (GAME.practice) spec.free = false;   // (the range's death cam is a free cam; back in your body it stops)
+    vm._specKey = null;
+    if (GAME.practice) spec.free = false;
     setListener(human.pos.x, human.eye, human.pos.z, human.yaw, human);
     const scopedNow = human.scoped && WEAPONS[human.cur] && WEAPONS[human.cur].scope;
     const tp = GAME.thirdPerson;
-    const fov = (scopedNow && !tp) ? 40 : (human.cheats.visuals.fov || 74);   // menu FOV slider
+    const fov = (scopedNow && !tp) ? 40 : (human.cheats.visuals.fov || 74);
     if (Math.abs(camera.fov - fov) > 0.5) { camera.fov += (fov - camera.fov) * 0.4; camera.updateProjectionMatrix(); }
     if (tp) {
-      // orbit BEHIND the player along -view so looking up/down keeps them centered (instead of
-      // panning to the floor). Pull in if a wall is between the camera and the player.
       const dist = 150, ex = human.pos.x, ey = human.eye, ez = human.pos.z;
       const cp = Math.cos(human.pitch);
       let ux = Math.sin(human.yaw) * cp, uy = -Math.sin(human.pitch) + 0.18, uz = Math.cos(human.yaw) * cp;
@@ -404,28 +371,26 @@ function updateCamera() {
   } else {
     if (vm.current) vm.current.visible = false;
     if (Math.abs(camera.fov - 74) > 0.5) { camera.fov = 74; camera.updateProjectionMatrix(); }
-    // the range has no one worth spectating: die and the camera stays where you fell (free cam), so the
-    // bot that killed you is still a visible bot, not a pair of eyes you are looking out of
     if (GAME.practice && !spec.free) { spec.free = true; spec.pos.copy(camera.position); spec.yaw = human.yaw; spec.pitch = human.pitch; }
-    if (spec.free) {                                          // free-fly spectator
+    if (spec.free) {
       setListener(spec.pos.x, spec.pos.y, spec.pos.z, spec.yaw, null);
       camera.position.copy(spec.pos); camera.rotation.set(spec.pitch, spec.yaw, 0, 'YXZ');
-    } else {                                                  // locked on a player
+    } else {
       ensureSpec(); const t = spec.target;
       if (t) {
         setListener(t.pos.x, t.eye, t.pos.z, t.yaw, t);
-        t.body.g.visible = spec.tp;                           // first-person spectate hides the spectated player's own model (shown only in 3p)
-        if (spec.tp) {                                        // third person of the spectated player (orbit + wall-aware pull-in)
+        t.body.g.visible = spec.tp;
+        if (spec.tp) {
           const dist = 150, ex = t.pos.x, ey = t.eye, ez = t.pos.z, cp = Math.cos(t.pitch);
           let ux = Math.sin(t.yaw) * cp, uy = -Math.sin(t.pitch) + 0.18, uz = Math.cos(t.yaw) * cp; const vl = Math.hypot(ux, uy, uz); ux /= vl; uy /= vl; uz /= vl;
           let allow = dist; if (meshBackend.active && meshBackend.bvh) { const h = meshBackend.bvh.raycast(ex, ey, ez, ux, uy, uz, dist); if (h) allow = Math.max(18, h.t - 12); }
           camera.position.set(ex + ux * allow, ey + uy * allow, ez + uz * allow); camera.rotation.set(t.pitch, t.yaw, 0, 'YXZ');
-        } else {                                             // FIRST-PERSON spectate: show the spectated player's gun
+        } else {
           camera.position.set(t.pos.x, t.eye, t.pos.z); camera.rotation.set(t.pitch, t.yaw, 0, 'YXZ');
-          const wkey = t.equippedNade || t.cur;              // rebuild the viewmodel only when their weapon changes
+          const wkey = t.equippedNade || t.cur;
           if (wkey && wkey !== vm._specKey) { setViewmodel(t.equippedNade || t.cur, !!t.equippedNade); vm._specKey = wkey; }
           const scopedT = t.scoped && WEAPONS[t.cur] && WEAPONS[t.cur].scope;
-          if (vm.current) vm.current.visible = !scopedT;     // un-hide (line above force-hid it); hide when they're scoped
+          if (vm.current) vm.current.visible = !scopedT;
         }
       }
     }
@@ -434,10 +399,8 @@ function updateCamera() {
 function render() { if (isEditorOpen()) { editorRender(); return; } renderer.render(scene, camera); }
 
 /* ============================== boot / deploy ============================== */
-// the human spawns on a RANDOM team each match; buildTeams keeps both sides 12-strong regardless
 function assignHumanTeam() { const pick = GAME.humanTeamPick; const ct = pick === "CT" ? true : pick === "T" ? false : Math.random() < 0.5; GAME.humanTeam = ct ? TEAM.CT : TEAM.T; GAME.ctIsHuman = ct; }
-// cheats only exist once the cheat is "injected" from the main menu; otherwise you play legit
-function applyCheatState() { if (GAME.injected) { if (!loadConfig()) refs.human.cheats = optimizedCheats(); } else refs.human.cheats = defaultCheats(false); buildCheatMenu(); }   // injected + nothing saved → the optimized default
+function applyCheatState() { if (GAME.injected) { if (!loadConfig()) refs.human.cheats = optimizedCheats(); } else refs.human.cheats = defaultCheats(false); buildCheatMenu(); }
 function deploy() {
   $("#startPanel").classList.remove("show"); document.body.classList.remove("menu");
   GAME.customMap = null; GAME.sourceMap = null;
@@ -448,7 +411,7 @@ function deploy() {
   buildTeams();
   applyCheatState();
   startRound();
-  renderer.domElement.requestPointerLock();
+  renderer.domElement.requestPointerLock();   // no-op on touch (mobile.js monkey-patch)
   audio();
 }
 
@@ -456,7 +419,7 @@ function deploySource(glb, spawns, texturedScene, nav) {
   $("#startPanel").classList.remove("show"); document.body.classList.remove("menu");
   GAME.customMap = null; GAME.sourceMap = spawns.name || "imported"; GAME.phase = "idle";
   const info = loadSourceMap(glb, spawns, texturedScene, nav);
-  loadPatches(GAME.sourceMap, texturedScene);   // re-apply saved map patches (collision + hidden surfaces)
+  loadPatches(GAME.sourceMap, texturedScene);
   GAME.round = 1; GAME.half = 1; GAME.scoreCT = 0; GAME.scoreT = 0; GAME.lossStreak = { CT: 0, T: 0 };
   assignHumanTeam();
   buildTeams(); applyCheatState(); startRound();
@@ -464,7 +427,6 @@ function deploySource(glb, spawns, texturedScene, nav) {
   showHint(`Imported ${GAME.sourceMap}: ${info.triangles | 0} tris · ${info.navNodes} nav nodes`);
   return info;
 }
-/* aim_practice: the config range (see practice.js) — no rounds, unarmed targets, one armed guard */
 function deployPractice() {
   $("#startPanel").classList.remove("show"); document.body.classList.remove("menu");
   buildPracticeMap();
@@ -475,15 +437,13 @@ function deployPractice() {
   renderer.domElement.requestPointerLock(); audio();
   showHint("aim_practice — targets respawn · B buys anything · the guard at the end of the lane shoots back");
 }
-// Esc under pointer lock is eaten by the browser (it releases the lock), so losing the lock mid-match with
-// nothing else open IS the Esc press: show the pause overlay
 document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement) return;
   if (GAME.phase === "warmup" || GAME.phase === "editor" || GAME.phase === "idle") return;
   if (anyPanelOpen() || $("#sbPanel").classList.contains("show") || document.getElementById("adminLogin")) return;
+  if (window.__MOBILE__) return;   // touch devices never enter pointer lock — don't treat "no lock" as Esc
   togglePause(true);
 });
-/* Esc: pause overlay; MAIN MENU tears the match down and brings the start screen back */
 function togglePause(force) {
   const p = $("#pausePanel"); const show = force !== undefined ? force : !p.classList.contains("show");
   p.classList.toggle("show", show);
@@ -498,27 +458,22 @@ function returnToMenu() {
   document.exitPointerLock(); $("#startPanel").classList.add("show");
   preloadMainMap().catch(() => {});
 }
-/* the PLAY screen's DEPLOY: map + bots per team + side + whether the cheat is injected */
 function startFromMenu(opts) {
   GAME.botsPerTeam = Math.max(1, Math.min(12, opts.bots | 0 || 12));
   GAME.humanTeamPick = opts.team || "random"; GAME.injected = !!opts.injected; GAME.practice = false;
   if (opts.map === "practice") deployPractice(); else deployMainMap();
 }
 
-/* ---- the bundled real cs_office map (mesh geometry + spawns) is the main map ---- */
-const MAIN_MAP = { glb: "./maps/cs_office.glb?v=" + ASSET_V, spawns: "./maps/cs_office.spawns.json?v=" + ASSET_V, name: "cs_office" };   // versioned: never a new loader with a stale map
+const MAIN_MAP = { glb: "./maps/cs_office.glb?v=" + ASSET_V, spawns: "./maps/cs_office.spawns.json?v=" + ASSET_V, name: "cs_office" };
 let mainMapAssets = null;
 function preloadMainMap() {
   mainMapAssets = Promise.all([
     fetch(MAIN_MAP.glb).then(r => { if (!r.ok) throw new Error("map geometry " + r.status); return r.arrayBuffer(); }),
     fetch(MAIN_MAP.spawns).then(r => r.ok ? r.json() : {}),
-    fetch("./maps/cs_office.nav.json?v=" + ASSET_V).then(r => r.ok ? r.json() : null).catch(() => null),   // the map's own bot mesh (optional)
+    fetch("./maps/cs_office.nav.json?v=" + ASSET_V).then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
   return mainMapAssets;
 }
-// Load the user's own textured map (./maps/cs_office.tex.glb) if they've placed one — never
-// bundled (it's Valve art); see tools/TEXTURES.md to generate it from your CS2 install.
-// Returns the parsed scene, or null to fall back to the procedural look.
 async function loadTexturedMap(url) {
   try {
     const r = await fetch(url); if (!r.ok) return null;
@@ -532,9 +487,9 @@ async function deployMainMap() {
     if (ls) ls.textContent = "Loading cs_office…";
     const [glb, spawns, nav] = await (mainMapAssets || preloadMainMap());
     spawns.name = spawns.name || MAIN_MAP.name;
-    const tex = await loadTexturedMap("./maps/cs_office.tex.glb?v=" + ASSET_V);   // the BSP look (tools/bsp), versioned like the rest
+    const tex = await loadTexturedMap("./maps/cs_office.tex.glb?v=" + ASSET_V);
     deploySource(glb, spawns, tex, nav);
-  } catch (e) {                                          // bundled map unreachable → procedural blockout
+  } catch (e) {
     console.warn("cs_office mesh map unavailable, using procedural layout:", e);
     if (ls) ls.textContent = "";
     deploy();
@@ -543,13 +498,12 @@ async function deployMainMap() {
 
 function boot() {
   buildCrosshair();
-  initMenu({ onDeploy: startFromMenu }); menuReady();     // CS2-style main menu (menu.js) — DEPLOY goes through startFromMenu
+  initMenu({ onDeploy: startFromMenu }); menuReady();
   $("#pauseResume").onclick = () => togglePause(false); $("#pauseMenu").onclick = returnToMenu;
-  preloadMainMap().catch(() => {});                      // warm the download while on the start screen
+  preloadMainMap().catch(() => {});
 }
 
-/* debug/test surface */
-preloadModels().then(m => { if (m.ready) console.log('[models] loaded:', ['player', 'weapons', 'nades'].filter(k => m[k]).join(', ')); }).catch(() => {});   // GLB player/weapon/grenade models (fallbacks stay if absent)
+preloadModels().then(m => { if (m.ready) console.log('[models] loaded:', ['player', 'weapons', 'nades'].filter(k => m[k]).join(', ')); }).catch(() => {});
 window.HVH = {
   get GAME() { return GAME; }, get agents() { return agents; }, get human() { return refs.human; }, MODELS,
   WEAPONS, ECON, computeDamage, WALLS, NODES, EDGES, segAABB, losClear, penetrate, camera, scene, renderer, meshBackend,
